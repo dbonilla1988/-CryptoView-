@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 
 const PriceChangeCell = ({ value }) => {
   const arrowUpOrDown = (value) => {
-    const direction = value?.toString().startsWith("-") ? "down" : "up";
+    const isNegative = value?.toString().startsWith("-");
+    const direction = isNegative ? "down" : "up";
     return (
       <svg fill="currentColor" className="w-5 h-5" viewBox="0 0 24 24">
         <path
@@ -24,11 +25,9 @@ const PriceChangeCell = ({ value }) => {
 
   return (
     <TableCell
-      className={
-        value?.toString().startsWith("-") ? "text-red-500" : "text-green-500"
-      }
+      className={value?.toString().startsWith("-") ? "text-red-500" : "text-green-500"}
     >
-      <div className="flex">
+      <div className="flex items-center">
         {arrowUpOrDown(value)}
         {formatPercentage(value)}
       </div>
@@ -39,7 +38,7 @@ const PriceChangeCell = ({ value }) => {
 export default function CoinsList({ post }) {
   return (
     <TableRow>
-      <TableCell className={`${post.name === "Chiliz" ? "text-red-500" : ""}`}>
+      <TableCell className={post.name === "Chiliz" ? "text-red-500" : ""}>
         <Link to={`/${post.id}`}>
           <div className="flex items-center">
             <span className="mr-2">{post.market_cap_rank}.</span>
@@ -56,11 +55,11 @@ export default function CoinsList({ post }) {
           </div>
         </Link>
       </TableCell>
-      <TableCell>${post.current_price}</TableCell>
+      <TableCell>${post.current_price.toLocaleString()}</TableCell>
       <PriceChangeCell value={post.price_change_percentage_1h_in_currency} />
       <PriceChangeCell value={post.price_change_percentage_24h_in_currency} />
       <PriceChangeCell value={post.price_change_percentage_7d_in_currency} />
-      <TableCell>${post.ath}</TableCell>
+      <TableCell>${post.ath.toLocaleString()}</TableCell>
     </TableRow>
   );
 }

@@ -1,24 +1,23 @@
 import { Line } from "react-chartjs-2";
 import { Chart as ChartJS, registerables } from "chart.js";
 
+// Register all necessary chart.js components
 ChartJS.register(...registerables);
 
-// Création d'un plugin pour dessiner une ligne verticale
+// Custom plugin to draw a vertical line on tooltip hover
 const verticalLinePlugin = {
   id: "verticalLineOnTooltip",
-  // We'll add the drawing logic inside the tooltip's callbacks
   beforeTooltipDraw: (context) => {
     const { scales, tooltip, ctx } = context;
     if (tooltip.getActiveElements().length > 0) {
-      // const ctx = tooltip.ctx;
       const tooltipElement = tooltip.getActiveElements()[0];
       const x = tooltipElement.element.x;
       const y = tooltipElement.element.y;
 
-      // Save the context to restore later
+      // Save the context for later restoration
       ctx.save();
 
-      // Draw the vertical line
+      // Draw vertical line
       ctx.beginPath();
       ctx.moveTo(x, scales.y.top);
       ctx.lineTo(x, scales.y.bottom);
@@ -26,7 +25,7 @@ const verticalLinePlugin = {
       ctx.strokeStyle = "rgba(128,128,128)";
       ctx.stroke();
 
-      // Draw a circle
+      // Draw circle at the hovered point
       ctx.beginPath();
       ctx.arc(x, y, 5, 0, 2 * Math.PI);
       ctx.fillStyle = "red";
@@ -36,47 +35,22 @@ const verticalLinePlugin = {
       ctx.restore();
     }
   },
-  // afterDraw: (chart) => {
-  //   if (
-  //     chart.isDatasetVisible &&
-  //     chart.tooltip.getActiveElements().length > 0
-  //   ) {
-  //     // if (chart.tooltip.getActiveElements().length > 0) {
-  //     const ctx = chart.ctx;
-  //     const tooltipElement = chart.tooltip.getActiveElements()[0];
-  //     const x = tooltipElement.element.x;
-  //     const y = tooltipElement.element.y;
-
-  //     // Sauvegarder le contexte pour restaurer après modifications
-  //     ctx.save();
-
-  //     // Dessiner la ligne verticale
-  //     ctx.beginPath();
-  //     ctx.moveTo(x, chart.scales.y.top);
-  //     ctx.lineTo(x, chart.scales.y.bottom);
-  //     ctx.lineWidth = 1;
-  //     ctx.strokeStyle = "rgba(128,128,128)";
-  //     ctx.stroke();
-
-  //     // Dessiner un cercle
-  //     ctx.beginPath();
-  //     ctx.arc(x, y, 5, 0, 2 * Math.PI);
-  //     ctx.fillStyle = "red";
-  //     ctx.fill();
-
-  //     // Restaurer le contexte
-  //     ctx.restore();
-  //   }
-  // },
 };
 
+// Register the custom plugin
 ChartJS.register(verticalLinePlugin);
 
 export default function LineChart({ data }) {
+  // Map data for chart labels and values
   const hourlyLabels = data.map((entry) => entry.time);
   const dataValue = data.map((entry) => entry.value.toFixed(5));
+
+  // Determine the line color based on value trend
   const dataValueColor =
-    dataValue[0] > dataValue.pop() ? "rgb(220,58,51,0.4)" : "rgb(0,128,0, 0.4)";
+    dataValue[0] > dataValue[dataValue.length - 1]
+      ? "rgba(220,58,51,0.4)" // Red for decreasing values
+      : "rgba(0,128,0,0.4)"; // Green for increasing values
+
   const chartData = {
     labels: hourlyLabels,
     datasets: [
