@@ -21,6 +21,11 @@ if (!process.env.MONGODB_URI) {
   process.exit(1);
 }
 
+if (!process.env.SECRET) {
+  console.error("Missing SECRET in environment variables.");
+  process.exit(1);
+}
+
 // Initialize express
 const app = express();
 

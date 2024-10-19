@@ -1,32 +1,14 @@
-const mongoose = require("mongoose");
-const { Schema } = mongoose;
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-const TransactionsSchema = new Schema({
-  id: {
-    type: String,
-    unique: true,
-  },
-  quantity: {
-    type: Number,
-    required: true,
-  },
-  price: {
-    type: Number,
-    required: true,
-  },
-  spent: {
-    type: Number,
-    required: true,
-  },
-  date: {
-    type: Date,
-    required: true,
-  },
-  user_id: {
-    type: Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
-  },
+const transactionSchema = new Schema({
+  address: { type: String, required: true },
+  to: { type: String, required: true },
+  value: { type: String, required: true },
+  blockNumber: { type: String, required: true },
+  hash: { type: String, required: true, unique: true }, // Ensure hash is unique
+  timeStamp: { type: String, required: true }
 });
 
-module.exports = mongoose.model("Transactions", TransactionsSchema);
+const Transaction = mongoose.model('Transaction', transactionSchema);
+module.exports = Transaction;
