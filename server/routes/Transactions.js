@@ -1,82 +1,157 @@
 const express = require("express");
-const axios = require("axios"); // Axios to interact with Etherscan API
-const mongoose = require("mongoose");
+const axios = require("axios");
+const Transaction = require("../models/transactionsModel.js");
 const requireAuth = require("../middleware/requireAuth.js");
+const { MongoClient } = require("mongodb");
+const Web3 = require("web3"); // Import Web3
+
+const uri = "mongodb+srv://dbonilla1988:dcBAP52L2py9yOiO@cluster0.i6pld.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+const client = new MongoClient(uri);
+
 const router = express.Router();
+router.use(requireAuth); // Ensure user is authenticated
 
-router.use(requireAuth);
+// Function to validate Ethereum address
+const isValidEthereumAddress = (address) => {
+  return /^0x[a-fA-F0-9]{40}$/.test(address);
+};
 
-// Import your Transaction model
-const Transaction = require("../models/transactionsModel");
+// Connect to MongoDB
+const connectDB = async () => {
+  try {
+    await client.connect();
+    console.log("Connected successfully to MongoDB");
+  } catch (error) {
+    console.error("Database connection failed:", error);
+  }
+};
 
-// API to get last 5 transactions for an Ethereum address
+// API endpoint to track transactions
 router.post("/track", async (req, res) => {
   const { address } = req.body;
 
-  console.log("Received address:", address);  // Log received address
-
+  // Validate request body
   if (!address) {
     return res.status(400).json({ error: "Address is required" });
   }
 
+  // Check if the address is valid
+  if (!isValidEthereumAddress(address)) {
+    return res.status(400).json({ error: "Invalid Ethereum address format" });
+  }
+
   try {
-    // Fetch data from Etherscan API
     const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
-    console.log("Etherscan API Key:", etherscanApiKey);  // Log API Key for debugging
-
     const etherscanUrl = `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${etherscanApiKey}`;
-    console.log("Etherscan URL:", etherscanUrl);  // Log the full Etherscan URL
 
+    // Fetch transaction data from Etherscan API
     const response = await axios.get(etherscanUrl);
-    console.log("Etherscan Response Data:", response.data);  // Log response from Etherscan
 
+    // Check for successful response
     if (response.data.status !== "1") {
-      console.log("Failed to retrieve transactions:", response.data.message);
-      return res.status(400).json({ error: `Failed to retrieve transactions: ${response.data.message}` });
+      return res.status(400).json({ error: response.data.message });
     }
 
     // Get the last 5 transactions
     const lastFiveTransactions = response.data.result.slice(0, 5);
-    console.log("Last 5 transactions:", lastFiveTransactions);  // Log last 5 transactions
 
-    // Store transactions in MongoDB, ensuring the hash is unique to avoid duplicate entries
-    for (let tx of lastFiveTransactions) {
-      try {
-        const newTransaction = new Transaction({
-          address: tx.from,
-          to: tx.to,
-          value: tx.value,
-          blockNumber: tx.blockNumber,
-          hash: tx.hash,
-          timeStamp: tx.timeStamp,
-        });
+    // Store transactions in MongoDB
+    const transactionPromises = lastFiveTransactions.map(async (tx) => {
+      const newTransaction = {
+        address: tx.from,
+        to: tx.to,
+        value: tx.value,
+        blockNumber: tx.blockNumber,
+        hash: tx.hash,
+        timeStamp: tx.timeStamp,
+      };
 
-        // Use upsert to avoid duplicate key error on unique 'hash'
-        await Transaction.updateOne({ hash: tx.hash }, newTransaction, { upsert: true });
-        console.log("Transaction upserted:", newTransaction);  // Log upserted transaction
-      } catch (error) {
-        console.error("Error saving transaction to MongoDB:", error.message);
-        return res.status(500).json({ error: `Error saving transaction to MongoDB: ${error.message}` });
-      }
-    }
+      // Upsert to avoid duplicate transactions
+      await Transaction.updateOne(
+        { hash: tx.hash }, // condition to find the document
+        { $set: newTransaction }, // use $set to update fields without _id
+        { upsert: true }
+      );
+    });
 
-    // Return the transactions to the user
+    await Promise.all(transactionPromises); // Wait for all upsert operations to complete
+
+    // Respond with the last 5 transactions
     res.json(lastFiveTransactions);
   } catch (error) {
-    console.error("Error fetching transactions:", error.message || error);
-    res.status(500).json({ error: `Internal Server Error: ${error.message}` });
+    console.error("Error fetching transactions:", error.message);
+    console.error("Full error:", error); // Log full error for more insight
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// Fetch transactions from MongoDB
-router.get("/", async (req, res) => {
+// New endpoint to query transactions by address and date range
+router.get("/query", async (req, res) => {
+  const { address, startDate, endDate } = req.query;
+
+  if (!address || !startDate || !endDate) {
+    return res.status(400).json({ error: "Address and date range are required" });
+  }
+
   try {
-    const transactions = await Transaction.find().sort({ timeStamp: -1 });
+    const transactions = await Transaction.find({
+      address: address,
+      timeStamp: {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      },
+    });
     res.json(transactions);
   } catch (error) {
-    console.error("Error fetching transactions from MongoDB:", error.message);
-    res.status(500).json({ error: `Failed to fetch transactions: ${error.message}` });
+    res.status(500).json({ error: error.message });
   }
 });
+
+// New API endpoint to check token balance
+router.get("/token-balance", async (req, res) => {
+  const { contractAddress, walletAddress } = req.query;
+
+  // Validate input
+  if (!contractAddress || !walletAddress) {
+    return res.status(400).json({ error: "Contract address and wallet address are required" });
+  }
+
+  if (!isValidEthereumAddress(contractAddress) || !isValidEthereumAddress(walletAddress)) {
+    return res.status(400).json({ error: "Invalid address format" });
+  }
+
+  try {
+    // Initialize Web3
+    const web3 = new Web3(new Web3.providers.HttpProvider(process.env.INFURA_NETWORK));
+
+    // ERC20 ABI
+    const abi = [
+      {
+        "constant": true,
+        "inputs": [{ "name": "_owner", "type": "address" }],
+        "name": "balanceOf",
+        "outputs": [{ "name": "balance", "type": "uint256" }],
+        "payable": false,
+        "stateMutability": "view",
+        "type": "function"
+      }
+    ];
+
+    const tokenContract = new web3.eth.Contract(abi, contractAddress);
+    const balance = await tokenContract.methods.balanceOf(walletAddress).call();
+    
+    // Convert the balance from Wei to the token's decimal representation
+    const decimals = await tokenContract.methods.decimals().call();
+    const formattedBalance = balance / (10 ** decimals); // Adjust for token decimals
+
+    res.json({ balance: formattedBalance });
+  } catch (error) {
+    console.error("Error fetching token balance:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Call the connectDB function when the module is loaded
+connectDB();
 
 module.exports = router;

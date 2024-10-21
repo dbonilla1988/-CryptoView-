@@ -1,3 +1,5 @@
+import React from 'react';
+import TokenBalanceChecker from './components/ui/TokenBalanceChecker'; // Adjusted import path
 import Home from "./pages/Home.jsx";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Detailed from "./pages/Detailed.jsx";
@@ -29,6 +31,7 @@ function App() {
           <Route path="/categories" element={<Home />}></Route>
           <Route path="/Trading" element={<Trading />}></Route>
           <Route path="/:id" element={<Detailed />}></Route>
+          <Route path="/check-balance" element={<TokenBalanceChecker />}></Route> {/* Add this line */}
         </Routes>
       </div>
     </Router>

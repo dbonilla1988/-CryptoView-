@@ -9,11 +9,11 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // connection entre le front (vite) et le back (express)
+  // Connection between the front (Vite) and the back (Express)
   server: {
     proxy: {
       "/api": {
-        target: "http://localhost:3001",
+        target: "http://localhost:5005", // Updated to use port 5005
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/api/, ""),

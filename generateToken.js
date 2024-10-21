@@ -9,7 +9,7 @@ const generateToken = (userId) => {
     return token;
 };
 
-// Example usage with the user ID from MongoDB
-const userId = "671405a050813e3372d8975c"; // Update this with your actual user ID
+// Example usage with the new user ID from MongoDB
+const userId = "67168877567182a108dbf967"; // Replace with the actual ID of the new user
 const token = generateToken(userId);
 console.log("Generated JWT:", token);

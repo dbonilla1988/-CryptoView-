@@ -18,14 +18,19 @@ const requireAuth = async (req, res, next) => {
   try {
     // Verify the token using the SECRET key
     const { _id } = jwt.verify(token, process.env.SECRET);
-    console.log("Verified user ID:", _id);
+    console.log("User ID from token:", _id); // Log the user ID
 
     // Find the user in the database by their _id
-    req.user = await userModel.findOne({ _id }).select("_id");
-    if (!req.user) {
+    const user = await userModel.findById(_id); // Lookup user by ID
+    console.log("User found in database:", user); // Log the user found
+
+    if (!user) {
       console.log("User not found");
       return res.status(401).json({ error: "User not found" });
     }
+
+    // Attach user to request object
+    req.user = user;
 
     // Proceed to the next middleware if everything is correct
     next();

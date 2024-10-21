@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-export default function FetchCrypto(url, option) {
+export default function FetchCrypto(url, option = {}) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState([]);
   const [error, setError] = useState(null);
@@ -9,35 +9,10 @@ export default function FetchCrypto(url, option) {
   useEffect(() => {
     const fetchAsync = async () => {
       try {
-        // const response = await fetch(url, {
-        //   method: "GET",
-        //   headers: {
-        //     // "Access-Control-Allow-Origin": "http://localhost:5173",
-        //     // Accept: "application/json", // Optional, but recommended
-        //   },
-        //   // mode: "no-cors", // Disables CORS
-        //   ...option,
-        // });
-
-        // // response
-        // //   .json()
-        // //   .then((data) => {
-        // //     setData(data);
-        // //     setLoading(false);
-        // //   })
-        // //   .catch((err) => {
-        // //     throw err;
-        // //   });
-        // const responseData = await response.json();
-        // setData(responseData);
+        await new Promise((resolve) => setTimeout(resolve, 1000)); // Adding a 1-second delay
         const response = await axios({
           url,
           method: "GET",
-          headers: {
-            // "Access-Control-Allow-Origin": "http://localhost:5173",
-            // Accept: "application/json", // Optional, but recommended
-          },
-          // mode: "no-cors", // Disables CORS
           ...option,
         });
         setData(response.data);
