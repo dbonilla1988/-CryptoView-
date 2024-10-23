@@ -22,6 +22,10 @@
     "cors": "^2.8.5",
     "date-fns": "^3.6.0",
     "dotenv": "^16.4.5",
+<<<<<<< HEAD
+=======
+    "execp": "^0.0.1",
+>>>>>>> upstream/main
     "express": "^4.19.2",
     "fs": "^0.0.1-security",
     "jsonwebtoken": "^9.0.2",
